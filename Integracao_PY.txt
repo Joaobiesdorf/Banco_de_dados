@@ -1,0 +1,87 @@
+import psycopg2
+import redis
+
+# conexão PostgreSQL
+pg = psycopg2.connect(
+    host="localhost",
+    database="companhia_aerea",
+    user="postgres",
+    password="unochapeco"
+)
+
+cursor = pg.cursor()
+
+# conexão Redis
+r = redis.Redis(
+    host='localhost',
+    port=6379,
+    decode_responses=True
+)
+
+# limpa dados antigos do Redis
+r.flushall()
+
+# consulta dados no PostgreSQL
+cursor.execute("""
+SELECT
+    v.codigo_voo,
+    a1.sigla AS origem,
+    a2.sigla AS destino,
+    v.status,
+    p.percentual_trajeto,
+    p.previsao_chegada_atualizada
+
+FROM voo v
+
+JOIN aeroporto a1
+ON v.origem_id = a1.id_aeroporto
+
+JOIN aeroporto a2
+ON v.destino_id = a2.id_aeroporto
+
+LEFT JOIN posicao_voo p
+ON v.id_voo = p.voo_id
+""")
+
+voos = cursor.fetchall()
+
+# envia dados para o Redis
+for voo in voos:
+
+    codigo = voo[0]
+
+    r.lpush("voos_em_curso", codigo)
+
+    r.hset(
+        "voo:" + codigo,
+        mapping={
+            "codigo_voo": voo[0],
+            "origem": voo[1],
+            "destino": voo[2],
+            "status": voo[3],
+            "percentual_trajeto": voo[4],
+            "previsao_chegada": str(voo[5])
+        }
+    )
+
+# leitura do Redis
+lista = r.lrange("voos_em_curso", 0, -1)
+
+print()
+print("VOOS EM CURSO")
+print()
+
+for codigo in lista:
+
+    dados = r.hgetall("voo:" + codigo)
+
+    print("Código:", dados["codigo_voo"])
+    print("Origem:", dados["origem"])
+    print("Destino:", dados["destino"])
+    print("Status:", dados["status"])
+    print("Percentual:", dados["percentual_trajeto"])
+    print("Previsão:", dados["previsao_chegada"])
+    print("-----------------------------")
+
+cursor.close()
+pg.close()

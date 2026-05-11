@@ -1,0 +1,94 @@
+CREATE DATABASE companhia_aerea;
+
+\c companhia_aerea
+
+CREATE TABLE aeroporto (
+    id_aeroporto SERIAL PRIMARY KEY,
+    nome VARCHAR(100),
+    cidade VARCHAR(100),
+    sigla CHAR(3)
+);
+
+CREATE TABLE voo (
+    id_voo SERIAL PRIMARY KEY,
+    codigo_voo VARCHAR(10),
+
+    origem_id INT REFERENCES aeroporto(id_aeroporto),
+    destino_id INT REFERENCES aeroporto(id_aeroporto),
+
+    horario_saida_previsto TIMESTAMP,
+    horario_chegada_previsto TIMESTAMP,
+
+    status VARCHAR(20)
+);
+
+CREATE TABLE posicao_voo (
+    id_posicao SERIAL PRIMARY KEY,
+
+    voo_id INT REFERENCES voo(id_voo),
+
+    latitude DECIMAL(9,6),
+    longitude DECIMAL(9,6),
+
+    percentual_trajeto INT,
+
+    previsao_chegada_atualizada TIMESTAMP
+);
+
+INSERT INTO aeroporto (nome, cidade, sigla)
+VALUES
+('Guarulhos', 'São Paulo', 'GRU'),
+('Salgado Filho', 'Porto Alegre', 'POA'),
+('Chapecó', 'Chapecó', 'XAP');
+
+INSERT INTO voo (
+    codigo_voo,
+    origem_id,
+    destino_id,
+    horario_saida_previsto,
+    horario_chegada_previsto,
+    status
+)
+VALUES
+(
+    'JJ101',
+    1,
+    2,
+    NOW(),
+    NOW() + INTERVAL '2 HOURS',
+    'EM_CURSO'
+),
+
+(
+    'AZ202',
+    2,
+    3,
+    NOW(),
+    NOW() + INTERVAL '1 HOURS',
+    'ATRASADO'
+),
+
+(
+    'LA303',
+    1,
+    3,
+    NOW(),
+    NOW() + INTERVAL '3 HOURS',
+    'CANCELADO'
+);
+
+INSERT INTO posicao_voo (
+    voo_id,
+    latitude,
+    longitude,
+    percentual_trajeto,
+    previsao_chegada_atualizada
+)
+VALUES
+(
+    1,
+    -27.100000,
+    -52.615000,
+    65,
+    NOW() + INTERVAL '40 MINUTES'
+);
